@@ -1,0 +1,7 @@
+[package]
+name = "stdf"
+version = "0.1.0"
+authors = ["Casey Marshall <git@cmars.tech>"]
+
+[dependencies]
+byte = "0.2"
