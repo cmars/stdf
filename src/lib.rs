@@ -1,7 +1,7 @@
 extern crate byte;
 
 use byte::ctx;
-use byte::{check_len, BytesExt, TryRead};
+use byte::{check_len, BytesExt, TryRead, TryWrite};
 
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct B1(u8);
@@ -42,6 +42,13 @@ macro_rules! single_byte_type {
                 Ok(($field_type(bytes[0] as $internal_type), 1))
             }
         }
+
+        impl TryWrite for $field_type {
+            fn try_write(self, bytes: &mut [u8], _ctx: ()) -> byte::Result<usize> {
+                bytes.write_with::<$internal_type>(&mut 0, self.0, byte::BE)?;
+                Ok(1)
+            }
+        }
     };
 }
 
@@ -59,6 +66,13 @@ macro_rules! fixed_multi_byte_type {
                     $field_type(bytes.read_with::<$internal_type>(&mut 0, endian)?),
                     $byte_length,
                 ))
+            }
+        }
+
+        impl TryWrite<ctx::Endian> for $field_type {
+            fn try_write(self, bytes: &mut [u8], endian: ctx::Endian) -> byte::Result<usize> {
+                bytes.write_with::<$internal_type>(&mut 0, self.0, endian)?;
+                Ok($byte_length)
             }
         }
     };
@@ -87,6 +101,15 @@ macro_rules! variable_length_type {
                 ))
             }
         }
+
+        impl<'a> TryWrite for $field_type<'a> {
+            fn try_write(self, bytes: &mut [u8], _ctx: ()) -> byte::Result<usize> {
+                let offset = &mut 0;
+                bytes.write_with::<u8>(offset, self.0.len() as u8, byte::BE)?;
+                bytes.write::<$internal_type>(offset, self.0)?;
+                Ok(self.0.len() + 1)
+            }
+        }
     };
 }
 
@@ -108,6 +131,21 @@ impl<'a> TryRead<'a, ctx::Endian> for Dn<'a> {
     }
 }
 
+impl<'a> TryWrite<ctx::Endian> for Dn<'a> {
+    fn try_write(self, bytes: &mut [u8], endian: ctx::Endian) -> byte::Result<usize> {
+        let offset = &mut 0;
+        let mut d_len = self.0;
+        let mut b_len = (d_len / 8 + (if d_len % 8 > 0 { 1 } else { 0 })) as usize;
+        if b_len > self.1.len() {
+            b_len = self.1.len();
+            d_len = (b_len * 8) as u16;
+        }
+        bytes.write_with::<u16>(offset, d_len, endian)?;
+        bytes.write::<&[u8]>(offset, &self.1[0..b_len as usize])?;
+        Ok(self.1.len() + 2)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -121,6 +159,9 @@ mod tests {
                 let offset = &mut 0;
                 let v = b.read_with::<$field_type>(offset, ()).unwrap();
                 assert_eq!(v, $field_type($expect_value));
+                let mut out = [0u8; 1];
+                out.write_with(&mut 0, v, ()).unwrap();
+                assert_eq!(b, out);
             }
         };
     }
@@ -141,12 +182,20 @@ mod tests {
             #[test]
             fn $name() {
                 let b: &[u8] = $bytes_value;
+
                 let offset = &mut 0;
                 let v = b.read_with::<$field_type>(offset, BE).unwrap();
                 assert_eq!(v, $field_type($expect_be));
+                let mut out = vec![0; b.len()];
+                out.write_with(&mut 0, v, BE).unwrap();
+                assert_eq!(b, out.as_slice());
+
                 *offset = 0;
                 let v = b.read_with::<$field_type>(offset, LE).unwrap();
                 assert_eq!(v, $field_type($expect_le));
+                let mut out = vec![0; b.len()];
+                out.write_with(&mut 0, v, LE).unwrap();
+                assert_eq!(b, out.as_slice());
             }
         };
     }
@@ -201,6 +250,9 @@ mod tests {
         let offset = &mut 0;
         let v = b.read_with::<Cn>(offset, ()).unwrap();
         assert_eq!(v, Cn("hello"));
+        let mut out = [0u8; 6];
+        out.write_with(&mut 0, v, ()).unwrap();
+        assert_eq!(b, out);
     }
 
     #[test]
@@ -209,6 +261,9 @@ mod tests {
         let offset = &mut 0;
         let v = b.read_with::<Bn>(offset, ()).unwrap();
         assert_eq!(v, Bn(&[0x68, 0x65, 0x6c, 0x6c, 0x6f]));
+        let mut out = [0u8; 6];
+        out.write_with(&mut 0, v, ()).unwrap();
+        assert_eq!(b, out);
     }
 
     #[test]
@@ -217,5 +272,9 @@ mod tests {
         let offset = &mut 0;
         let v = b.read_with::<Dn>(offset, BE).unwrap();
         assert_eq!(v, Dn(13, &[0x68, 0x65]));
+        let mut out = [0u8; 5];
+        out.write_with(&mut 0, v, BE).unwrap();
+        assert_ne!(b, out);
+        assert_eq!(b[..4], out[..4]);
     }
 }
