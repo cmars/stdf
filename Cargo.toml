@@ -5,3 +5,4 @@ authors = ["Casey Marshall <git@cmars.tech>"]
 
 [dependencies]
 byte = "0.2"
+stdf-record-derive = {path="stdf-record-derive"}

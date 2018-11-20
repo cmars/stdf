@@ -1,0 +1,12 @@
+[package]
+name = "stdf-record-derive"
+version = "0.1.0"
+authors = ["Casey Marshall <git@cmars.tech>"]
+
+[dependencies]
+syn = "0.15.21"
+quote = "0.6.10"
+proc-macro2 = "0.4.24"
+
+[lib]
+proc-macro = true

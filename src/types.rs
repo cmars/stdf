@@ -37,16 +37,16 @@ pub struct Dn<'a>(u16, &'a [u8]);
 
 macro_rules! single_byte_type {
     ($field_type:ident, $internal_type:ident) => {
-        impl<'a> TryRead<'a> for $field_type {
-            fn try_read(bytes: &'a [u8], _ctx: ()) -> byte::Result<(Self, usize)> {
+        impl<'a> TryRead<'a, ctx::Endian> for $field_type {
+            fn try_read(bytes: &'a [u8], _ctx: ctx::Endian) -> byte::Result<(Self, usize)> {
                 check_len(bytes, 1)?;
                 Ok(($field_type(bytes[0] as $internal_type), 1))
             }
         }
 
-        impl TryWrite for $field_type {
-            fn try_write(self, bytes: &mut [u8], _ctx: ()) -> byte::Result<usize> {
-                bytes.write_with::<$internal_type>(&mut 0, self.0, byte::BE)?;
+        impl TryWrite<ctx::Endian> for $field_type {
+            fn try_write(self, bytes: &mut [u8], endian: ctx::Endian) -> byte::Result<usize> {
+                bytes.write_with::<$internal_type>(&mut 0, self.0, endian)?;
                 Ok(1)
             }
         }
@@ -54,6 +54,12 @@ macro_rules! single_byte_type {
         impl convert::From<$internal_type> for $field_type {
             fn from(v: $internal_type) -> $field_type {
                 $field_type(v)
+            }
+        }
+
+        impl convert::From<$field_type> for $internal_type {
+            fn from(v: $field_type) -> $internal_type {
+                v.0
             }
         }
     };
@@ -102,10 +108,10 @@ fixed_multi_byte_type!(R8, f64, 8);
 
 macro_rules! variable_length_type {
     ($field_type:ident, $internal_type:ty, $read_context:expr) => {
-        impl<'a> TryRead<'a> for $field_type<'a> {
-            fn try_read(bytes: &'a [u8], _ctx: ()) -> byte::Result<(Self, usize)> {
+        impl<'a> TryRead<'a, ctx::Endian> for $field_type<'a> {
+            fn try_read(bytes: &'a [u8], endian: ctx::Endian) -> byte::Result<(Self, usize)> {
                 let offset = &mut 0;
-                let len = bytes.read_with::<U1>(offset, ())?;
+                let len = bytes.read_with::<U1>(offset, endian)?;
                 Ok((
                     $field_type(
                         bytes.read_with::<$internal_type>(offset, $read_context(len.0 as usize))?,
@@ -115,8 +121,8 @@ macro_rules! variable_length_type {
             }
         }
 
-        impl<'a> TryWrite for $field_type<'a> {
-            fn try_write(self, bytes: &mut [u8], _ctx: ()) -> byte::Result<usize> {
+        impl<'a> TryWrite<ctx::Endian> for $field_type<'a> {
+            fn try_write(self, bytes: &mut [u8], _endian: ctx::Endian) -> byte::Result<usize> {
                 let offset = &mut 0;
                 bytes.write_with::<u8>(offset, self.0.len() as u8, byte::BE)?;
                 bytes.write::<$internal_type>(offset, self.0)?;
@@ -170,10 +176,10 @@ mod tests {
             fn $name() {
                 let b: &[u8] = &[$byte_value];
                 let offset = &mut 0;
-                let v = b.read_with::<$field_type>(offset, ()).unwrap();
+                let v = b.read_with::<$field_type>(offset, BE).unwrap();
                 assert_eq!(v, $field_type($expect_value));
                 let mut out = [0u8; 1];
-                out.write_with(&mut 0, v, ()).unwrap();
+                out.write_with(&mut 0, v, BE).unwrap();
                 assert_eq!(b, out);
             }
         };
@@ -261,10 +267,10 @@ mod tests {
     fn test_cn() {
         let b: &[u8] = &[0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f];
         let offset = &mut 0;
-        let v = b.read_with::<Cn>(offset, ()).unwrap();
+        let v = b.read_with::<Cn>(offset, BE).unwrap();
         assert_eq!(v, Cn("hello"));
         let mut out = [0u8; 6];
-        out.write_with(&mut 0, v, ()).unwrap();
+        out.write_with(&mut 0, v, BE).unwrap();
         assert_eq!(b, out);
     }
 
@@ -272,10 +278,10 @@ mod tests {
     fn test_bn() {
         let b: &[u8] = &[0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f];
         let offset = &mut 0;
-        let v = b.read_with::<Bn>(offset, ()).unwrap();
+        let v = b.read_with::<Bn>(offset, BE).unwrap();
         assert_eq!(v, Bn(&[0x68, 0x65, 0x6c, 0x6c, 0x6f]));
         let mut out = [0u8; 6];
-        out.write_with(&mut 0, v, ()).unwrap();
+        out.write_with(&mut 0, v, BE).unwrap();
         assert_eq!(b, out);
     }
 
