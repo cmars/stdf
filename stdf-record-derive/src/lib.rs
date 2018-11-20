@@ -1,14 +1,14 @@
 extern crate proc_macro;
 extern crate proc_macro2;
+#[macro_use]
 extern crate syn;
-
 #[macro_use]
 extern crate quote;
 
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
 
-#[proc_macro_derive(STDFRecord, attributes(STDFField))]
+#[proc_macro_derive(STDFRecord, attributes(array_length, nibble_array_length))]
 pub fn stdf_record(input: TokenStream) -> TokenStream {
     let derive_input = parse_macro_input!(input as DeriveInput);
     let name = derive_input.ident;
@@ -41,9 +41,20 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
                 bytes.write_with::<#ty>(offset, self.#name, endian)?;
             }
         });
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let default_impl_generics: syn::Generics = parse_quote! { <'a> };
+    let (record_impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    // TryRead needs to declare an 'a lifetime for the byte slice. The record type we're
+    // implementing for might already declare an 'a lifetime if it contains variable-length field
+    // types, which should use the same lifetime as the read buffer. However if it doesn't, an 'a
+    // lifetime needs to be declared.
+    let (impl_generics, record_ty_lifetimes) = if generics.lifetimes().count() == 0 {
+        let (ig, _, _) = default_impl_generics.split_for_impl();
+        (ig, default_impl_generics.lifetimes())
+    } else {
+        (record_impl_generics, generics.lifetimes())
+    };
     let try_read = quote!{
-        impl #impl_generics TryRead<'a, ctx::Endian> for #name #ty_generics #where_clause {
+        impl #impl_generics TryRead<#(#record_ty_lifetimes,)* ctx::Endian> for #name #ty_generics #where_clause {
             fn try_read(bytes: &'a [u8], endian: ctx::Endian) -> byte::Result<(Self, usize)> {
                 let offset = &mut 0;
                 Ok((

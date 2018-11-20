@@ -165,6 +165,22 @@ impl<'a> TryWrite<ctx::Endian> for Dn<'a> {
     }
 }
 
+pub enum Vn<'a> {
+    B0,
+    U1(U1),
+    U2(U2),
+    U4(U4),
+    I1(I1),
+    I2(I2),
+    I4(I4),
+    R4(R4),
+    R8(R8),
+    Cn(Cn<'a>),
+    Bn(Bn<'a>),
+    Dn(Dn<'a>),
+    N1(U1),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
