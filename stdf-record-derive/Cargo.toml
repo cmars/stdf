@@ -2,6 +2,8 @@
 name = "stdf-record-derive"
 version = "0.1.0"
 authors = ["Casey Marshall <git@cmars.tech>"]
+description = "Procedural macros supporting the `stdf` crate"
+license = "Apache-2.0"
 
 [dependencies]
 syn = "0.15.21"
