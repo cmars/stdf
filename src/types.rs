@@ -1,4 +1,5 @@
 use std::convert;
+use std::fmt;
 
 extern crate byte;
 use byte::ctx;
@@ -28,8 +29,8 @@ pub struct I8(i64);
 pub struct R4(f32);
 #[derive(Debug, PartialEq, PartialOrd)]
 pub struct R8(f64);
-#[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct Cn<'a>(&'a str);
+#[derive(Eq, Ord, PartialEq, PartialOrd)]
+pub struct Cn<'a>(&'a [u8]);
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Bn<'a>(&'a [u8]);
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -59,6 +60,12 @@ macro_rules! single_byte_type {
 
         impl convert::From<$field_type> for $internal_type {
             fn from(v: $field_type) -> $internal_type {
+                v.0
+            }
+        }
+
+        impl<'a> convert::From<&'a $field_type> for $internal_type {
+            fn from(v: &$field_type) -> $internal_type {
                 v.0
             }
         }
@@ -94,6 +101,18 @@ macro_rules! fixed_multi_byte_type {
                 $field_type(v)
             }
         }
+
+        impl convert::From<$field_type> for $internal_type {
+            fn from(v: $field_type) -> $internal_type {
+                v.0
+            }
+        }
+
+        impl<'a> convert::From<&'a $field_type> for $internal_type {
+            fn from(v: &$field_type) -> $internal_type {
+                v.0
+            }
+        }
     };
 }
 
@@ -112,12 +131,12 @@ macro_rules! variable_length_type {
             fn try_read(bytes: &'a [u8], endian: ctx::Endian) -> byte::Result<(Self, usize)> {
                 let offset = &mut 0;
                 let len = bytes.read_with::<U1>(offset, endian)?;
-                Ok((
-                    $field_type(
-                        bytes.read_with::<$internal_type>(offset, $read_context(len.0 as usize))?,
-                    ),
-                    *offset,
-                ))
+                let data = if len.0 > 0 {
+                    bytes.read_with::<$internal_type>(offset, $read_context(len.0 as usize))?
+                } else {
+                    &[]
+                };
+                Ok(($field_type(data), *offset))
             }
         }
 
@@ -125,15 +144,23 @@ macro_rules! variable_length_type {
             fn try_write(self, bytes: &mut [u8], _endian: ctx::Endian) -> byte::Result<usize> {
                 let offset = &mut 0;
                 bytes.write_with::<u8>(offset, self.0.len() as u8, byte::BE)?;
-                bytes.write::<$internal_type>(offset, self.0)?;
+                if self.0.len() > 0 {
+                    bytes.write::<$internal_type>(offset, self.0)?;
+                }
                 Ok(self.0.len() + 1)
             }
         }
     };
 }
 
-variable_length_type!(Cn, &str, ctx::Str::Len);
+variable_length_type!(Cn, &[u8], ctx::Bytes::Len);
 variable_length_type!(Bn, &[u8], ctx::Bytes::Len);
+
+impl<'a> fmt::Debug for Cn<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", String::from_utf8_lossy(&self.0))
+    }
+}
 
 impl<'a> TryRead<'a, ctx::Endian> for Dn<'a> {
     fn try_read(bytes: &'a [u8], endian: ctx::Endian) -> byte::Result<(Self, usize)> {
@@ -281,12 +308,16 @@ mod tests {
 
     #[test]
     fn test_cn() {
-        let b: &[u8] = &[0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f];
+        let b: &[u8] = &[0x05, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x00];
         let offset = &mut 0;
         let v = b.read_with::<Cn>(offset, BE).unwrap();
-        assert_eq!(v, Cn("hello"));
-        let mut out = [0u8; 6];
-        out.write_with(&mut 0, v, BE).unwrap();
+        assert_eq!(v, Cn(b"hello"));
+        let empty = b.read_with::<Cn>(offset, BE).unwrap();
+        assert_eq!(empty, Cn(b""));
+        let mut out = [0u8; 7];
+        *offset = 0;
+        out.write_with(offset, v, BE).unwrap();
+        out.write_with(offset, empty, BE).unwrap();
         assert_eq!(b, out);
     }
 

@@ -9,4 +9,5 @@ license = "Apache-2.0"
 
 [dependencies]
 byte = "0.2"
+memmap = "0.7.0"
 stdf-record-derive = {path="stdf-record-derive", version="0.1.0"}

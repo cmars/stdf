@@ -1,6 +1,6 @@
 extern crate byte;
 use byte::ctx;
-use byte::{BytesExt, TryRead, TryWrite};
+use byte::{check_len, BytesExt, TryRead, TryWrite};
 
 use types::*;
 
@@ -468,6 +468,142 @@ pub struct GDR<'a> {
 pub struct DTR<'a> {
     pub header: Header,
     pub text_dat: Cn<'a>,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Unknown<'a> {
+    pub header: Header,
+    pub contents: &'a [u8],
+}
+
+impl<'a> TryRead<'a, ctx::Endian> for Unknown<'a> {
+    fn try_read(bytes: &'a [u8], endian: ctx::Endian) -> byte::Result<(Self, usize)> {
+        let offset = &mut 0;
+        let header = bytes.read_with::<Header>(offset, endian)?;
+        let reclen = u16::from(&header.rec_len) as usize;
+        check_len(bytes, reclen)?;
+        let unk = Unknown {
+            header: header,
+            contents: &bytes[*offset..*offset + reclen],
+        };
+        *offset += reclen;
+        Ok((unk, *offset))
+    }
+}
+
+impl<'a> TryWrite<ctx::Endian> for Unknown<'a> {
+    fn try_write(self, bytes: &mut [u8], endian: ctx::Endian) -> byte::Result<usize> {
+        let offset = &mut 0;
+        bytes.write_with::<Header>(offset, self.header, endian)?;
+        bytes[*offset..].clone_from_slice(self.contents);
+        *offset += self.contents.len();
+        Ok(*offset)
+    }
+}
+
+#[derive(Debug)]
+pub enum V4<'a> {
+    FAR(FAR),
+    ATR(ATR<'a>),
+    MIR(MIR<'a>),
+    MRR(MRR<'a>),
+    PCR(PCR),
+    HBR(HBR<'a>),
+    SBR(SBR<'a>),
+    PMR(PMR<'a>),
+    //PGR(PGR<'a>),
+    //PLR(PLR<'a>),
+    //RDR(RDR),
+    //SDR(SDR<'a>),
+    WIR(WIR<'a>),
+    WRR(WRR<'a>),
+    WCR(WCR),
+    PIR(PIR),
+    PRR(PRR<'a>),
+    TSR(TSR<'a>),
+    PTR(PTR<'a>),
+    //MPR(MPR<'a>),
+    //FTR(FTR<'a>),
+    BPS(BPS<'a>),
+    EPS(EPS),
+    //GDR(GDR<'a>),
+    DTR(DTR<'a>),
+    Unknown(Unknown<'a>),
+}
+
+impl<'a> TryRead<'a, ctx::Endian> for V4<'a> {
+    fn try_read(inp: &'a [u8], endian: ctx::Endian) -> byte::Result<(Self, usize)> {
+        let offset = &mut 0;
+        let header = inp.read_with::<Header>(offset, endian)?;
+        let typ_sub = (u8::from(&header.rec_typ), u8::from(&header.rec_sub));
+        let reclen = u16::from(&header.rec_len) as usize;
+        let bytes = &inp[..reclen + *offset];
+        *offset = 0;
+        let rec = match typ_sub {
+            (0, 10) => V4::FAR(bytes.read_with::<FAR>(offset, endian)?),
+            (0, 20) => V4::ATR(bytes.read_with::<ATR>(offset, endian)?),
+            (1, 10) => V4::MIR(bytes.read_with::<MIR>(offset, endian)?),
+            (1, 20) => V4::MRR(bytes.read_with::<MRR>(offset, endian)?),
+            (1, 30) => V4::PCR(bytes.read_with::<PCR>(offset, endian)?),
+            (1, 40) => V4::HBR(bytes.read_with::<HBR>(offset, endian)?),
+            (1, 50) => V4::SBR(bytes.read_with::<SBR>(offset, endian)?),
+            (1, 60) => V4::PMR(bytes.read_with::<PMR>(offset, endian)?),
+            //(1, 62) => V4::PGR(bytes.read_with::<PGR>(offset, endian)?),
+            //(1, 63) => V4::PLR(bytes.read_with::<PLR>(offset, endian)?),
+            //(1, 70) => V4::RDR(bytes.read_with::<RDR>(offset, endian)?),
+            //(1, 80) => V4::SDR(bytes.read_with::<SDR>(offset, endian)?),
+            (2, 10) => V4::WIR(bytes.read_with::<WIR>(offset, endian)?),
+            (2, 20) => V4::WRR(bytes.read_with::<WRR>(offset, endian)?),
+            (2, 30) => V4::WCR(bytes.read_with::<WCR>(offset, endian)?),
+            (5, 10) => V4::PIR(bytes.read_with::<PIR>(offset, endian)?),
+            (5, 20) => V4::PRR(bytes.read_with::<PRR>(offset, endian)?),
+            (10, 30) => V4::TSR(bytes.read_with::<TSR>(offset, endian)?),
+            (15, 10) => V4::PTR(bytes.read_with::<PTR>(offset, endian)?),
+            //(15, 15) => V4::MPR(bytes.read_with::<MPR>(offset, endian)?),
+            //(15, 20) => V4::FTR(bytes.read_with::<FTR>(offset, endian)?),
+            (20, 10) => V4::BPS(bytes.read_with::<BPS>(offset, endian)?),
+            (20, 20) => V4::EPS(bytes.read_with::<EPS>(offset, endian)?),
+            //(50, 10) => V4::GDR(bytes.read_with::<GDR>(offset, endian)?),
+            (50, 30) => V4::DTR(bytes.read_with::<DTR>(offset, endian)?),
+            _ => V4::Unknown(bytes.read_with::<Unknown>(offset, endian)?),
+        };
+        Ok((rec, *offset))
+    }
+}
+
+impl<'a> TryWrite<ctx::Endian> for V4<'a> {
+    fn try_write(self, bytes: &mut [u8], endian: ctx::Endian) -> byte::Result<usize> {
+        let offset = &mut 0;
+        match self {
+            V4::FAR(r) => bytes.write_with::<FAR>(offset, r, endian),
+            V4::ATR(r) => bytes.write_with::<ATR>(offset, r, endian),
+            V4::MIR(r) => bytes.write_with::<MIR>(offset, r, endian),
+            V4::MRR(r) => bytes.write_with::<MRR>(offset, r, endian),
+            V4::PCR(r) => bytes.write_with::<PCR>(offset, r, endian),
+            V4::HBR(r) => bytes.write_with::<HBR>(offset, r, endian),
+            V4::SBR(r) => bytes.write_with::<SBR>(offset, r, endian),
+            V4::PMR(r) => bytes.write_with::<PMR>(offset, r, endian),
+            //V4::PGR(r) => bytes.write_with::<PGR>(offset, r, endian),
+            //V4::PLR(r) => bytes.write_with::<PLR>(offset, r, endian),
+            //V4::RDR(r) => bytes.write_with::<RDR>(offset, r, endian),
+            //V4::SDR(r) => bytes.write_with::<SDR>(offset, r, endian),
+            V4::WIR(r) => bytes.write_with::<WIR>(offset, r, endian),
+            V4::WRR(r) => bytes.write_with::<WRR>(offset, r, endian),
+            V4::WCR(r) => bytes.write_with::<WCR>(offset, r, endian),
+            V4::PIR(r) => bytes.write_with::<PIR>(offset, r, endian),
+            V4::PRR(r) => bytes.write_with::<PRR>(offset, r, endian),
+            V4::TSR(r) => bytes.write_with::<TSR>(offset, r, endian),
+            V4::PTR(r) => bytes.write_with::<PTR>(offset, r, endian),
+            //V4::MPR(r) => bytes.write_with::<MPR>(offset, r, endian),
+            //V4::FTR(r) => bytes.write_with::<FTR>(offset, r, endian),
+            V4::BPS(r) => bytes.write_with::<BPS>(offset, r, endian),
+            V4::EPS(r) => bytes.write_with::<EPS>(offset, r, endian),
+            //V4::GDR(r) => bytes.write_with::<GDR>(offset, r, endian),
+            V4::DTR(r) => bytes.write_with::<DTR>(offset, r, endian),
+            V4::Unknown(r) => bytes.write_with::<Unknown>(offset, r, endian),
+        }?;
+        Ok(*offset)
+    }
 }
 
 #[cfg(test)]
