@@ -30,11 +30,11 @@ pub struct R4(f32);
 #[derive(Debug, PartialEq, PartialOrd)]
 pub struct R8(f64);
 #[derive(Eq, Ord, PartialEq, PartialOrd)]
-pub struct Cn<'a>(&'a [u8]);
+pub struct Cn<'a>(pub &'a [u8]);
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct Bn<'a>(&'a [u8]);
+pub struct Bn<'a>(pub &'a [u8]);
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct Dn<'a>(u16, &'a [u8]);
+pub struct Dn<'a>(pub u16, pub &'a [u8]);
 
 macro_rules! single_byte_type {
     ($field_type:ident, $internal_type:ident) => {
@@ -126,13 +126,13 @@ fixed_multi_byte_type!(R4, f32, 4);
 fixed_multi_byte_type!(R8, f64, 8);
 
 macro_rules! variable_length_type {
-    ($field_type:ident, $internal_type:ty, $read_context:expr) => {
+    ($field_type:ident) => {
         impl<'a> TryRead<'a, ctx::Endian> for $field_type<'a> {
             fn try_read(bytes: &'a [u8], endian: ctx::Endian) -> byte::Result<(Self, usize)> {
                 let offset = &mut 0;
                 let len = bytes.read_with::<U1>(offset, endian)?;
                 let data = if len.0 > 0 {
-                    bytes.read_with::<$internal_type>(offset, $read_context(len.0 as usize))?
+                    bytes.read_with::<&[u8]>(offset, ctx::Bytes::Len(len.0 as usize))?
                 } else {
                     &[]
                 };
@@ -145,7 +145,7 @@ macro_rules! variable_length_type {
                 let offset = &mut 0;
                 bytes.write_with::<u8>(offset, self.0.len() as u8, byte::BE)?;
                 if self.0.len() > 0 {
-                    bytes.write::<$internal_type>(offset, self.0)?;
+                    bytes.write::<&[u8]>(offset, self.0)?;
                 }
                 Ok(self.0.len() + 1)
             }
@@ -153,8 +153,8 @@ macro_rules! variable_length_type {
     };
 }
 
-variable_length_type!(Cn, &[u8], ctx::Bytes::Len);
-variable_length_type!(Bn, &[u8], ctx::Bytes::Len);
+variable_length_type!(Cn);
+variable_length_type!(Bn);
 
 impl<'a> fmt::Debug for Cn<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

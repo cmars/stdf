@@ -8,7 +8,24 @@ extern crate quote;
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
 
-#[proc_macro_derive(STDFRecord, attributes(array_length, nibble_array_length))]
+fn attr_name(a: &syn::Path) -> String {
+    a.segments
+        .iter()
+        .map(|x| x.ident.to_string())
+        .collect::<Vec<String>>()
+        .join("::")
+}
+
+fn default_attr(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
+    for attr in &f.attrs {
+        if attr_name(&attr.path) == "default" {
+            return Some(attr.tts.clone());
+        }
+    }
+    None
+}
+
+#[proc_macro_derive(STDFRecord, attributes(default, array_length, nibble_array_length))]
 pub fn stdf_record(input: TokenStream) -> TokenStream {
     let derive_input = parse_macro_input!(input as DeriveInput);
     let name = derive_input.ident;
@@ -22,8 +39,17 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
     let try_read_vars = record_struct.fields.iter().map(|ref x| {
         let name = x.ident.as_ref().unwrap();
         let ty = &x.ty;
+        let missing = match default_attr(x) {
+            Some(ts) => ts,
+            None => quote! { return Err(byte::Error::Incomplete) },
+        };
         quote! {
-            let #name = bytes.read_with::<#ty>(offset, endian)?;
+            let #name = match bytes.read_with::<#ty>(offset, endian) {
+                Ok(v) => v,
+                Err(byte::Error::Incomplete) => #missing,
+                Err(byte::Error::BadOffset(_)) => #missing,
+                Err(e) => return Err(e),
+            };
         }
     });
     let try_read_fields = record_struct.fields.iter().map(|ref x| {

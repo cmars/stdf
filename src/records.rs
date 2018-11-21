@@ -108,38 +108,66 @@ pub struct MIR<'a> {
     pub node_nam: Cn<'a>,
     pub tstr_typ: Cn<'a>,
     pub job_nam: Cn<'a>,
+    #[default(Cn(b""))]
     pub job_rev: Cn<'a>,
+    #[default(Cn(b""))]
     pub sblot_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub oper_nam: Cn<'a>,
+    #[default(Cn(b""))]
     pub exec_typ: Cn<'a>,
+    #[default(Cn(b""))]
     pub exec_ver: Cn<'a>,
+    #[default(Cn(b""))]
     pub test_cod: Cn<'a>,
+    #[default(Cn(b""))]
     pub tst_temp: Cn<'a>,
+    #[default(Cn(b""))]
     pub user_txt: Cn<'a>,
+    #[default(Cn(b""))]
     pub aux_file: Cn<'a>,
+    #[default(Cn(b""))]
     pub pkg_typ: Cn<'a>,
+    #[default(Cn(b""))]
     pub famly_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub date_cod: Cn<'a>,
+    #[default(Cn(b""))]
     pub facil_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub floor_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub proc_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub oper_frq: Cn<'a>,
+    #[default(Cn(b""))]
     pub spec_nam: Cn<'a>,
+    #[default(Cn(b""))]
     pub spec_ver: Cn<'a>,
+    #[default(Cn(b""))]
     pub flow_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub setup_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub dsgn_rev: Cn<'a>,
+    #[default(Cn(b""))]
     pub eng_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub rom_cod: Cn<'a>,
+    #[default(Cn(b""))]
     pub serl_num: Cn<'a>,
+    #[default(Cn(b""))]
     pub supr_nam: Cn<'a>,
 }
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct MRR<'a> {
     pub finish_t: U4,
+    #[default(C1::from(0x20))]
     pub disp_cod: C1,
+    #[default(Cn(b""))]
     pub usr_desc: Cn<'a>,
+    #[default(Cn(b""))]
     pub exc_desc: Cn<'a>,
 }
 
@@ -147,11 +175,15 @@ pub struct MRR<'a> {
 pub struct PCR {
     pub head_num: U1,
     pub site_num: U1,
-    pub part_cnt: U1,
-    pub rtst_cnt: U1,
-    pub abrt_cnt: U1,
-    pub good_cnt: U1,
-    pub func_cnt: U1,
+    pub part_cnt: U4,
+    #[default(U4::from(0xffffffff))]
+    pub rtst_cnt: U4,
+    #[default(U4::from(0xffffffff))]
+    pub abrt_cnt: U4,
+    #[default(U4::from(0xffffffff))]
+    pub good_cnt: U4,
+    #[default(U4::from(0xffffffff))]
+    pub func_cnt: U4,
 }
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
@@ -160,7 +192,9 @@ pub struct HBR<'a> {
     pub site_num: U1,
     pub hbin_num: U2,
     pub hbin_cnt: U4,
+    #[default(C1::from(0x20))]
     pub hbin_pf: C1,
+    #[default(Cn(b""))]
     pub hbin_nam: Cn<'a>,
 }
 
@@ -170,18 +204,26 @@ pub struct SBR<'a> {
     pub site_num: U1,
     pub sbin_num: U2,
     pub sbin_cnt: U4,
+    #[default(C1::from(0x20))]
     pub sbin_pf: C1,
+    #[default(Cn(b""))]
     pub sbin_nam: Cn<'a>,
 }
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct PMR<'a> {
     pub pmr_index: U2,
+    #[default(U2::from(0))]
     pub chan_typ: U2,
+    #[default(Cn(b""))]
     pub chan_nam: Cn<'a>,
+    #[default(Cn(b""))]
     pub phy_nam: Cn<'a>,
+    #[default(Cn(b""))]
     pub log_nam: Cn<'a>,
+    #[default(U1::from(1))]
     pub head_num: U1,
+    #[default(U1::from(1))]
     pub site_num: U1,
 }
 
@@ -250,39 +292,61 @@ pub struct SDR<'a> {
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct WIR<'a> {
     pub head_num: U1,
+    #[default(U1::from(255))]
     pub site_grp: U1,
     pub start_t: U4,
+    #[default(Cn(b""))]
     pub wafer_id: Cn<'a>,
 }
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct WRR<'a> {
     pub head_num: U1,
+    #[default(U1::from(255))]
     pub site_grp: U1,
     pub finish_t: U4,
     pub part_cnt: U4,
+    #[default(U4::from(0xffffffff))]
     pub rtst_cnt: U4,
+    #[default(U4::from(0xffffffff))]
     pub abrt_cnt: U4,
+    #[default(U4::from(0xffffffff))]
     pub good_cnt: U4,
+    #[default(U4::from(0xffffffff))]
     pub func_cnt: U4,
+    #[default(Cn(b""))]
     pub wafer_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub fabwf_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub frame_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub mask_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub usr_desc: Cn<'a>,
+    #[default(Cn(b""))]
     pub exc_desc: Cn<'a>,
 }
 
 #[derive(Debug, PartialEq, STDFRecord)]
 pub struct WCR {
+    #[default(R4::from(0.0))]
     pub wafr_siz: R4,
+    #[default(R4::from(0.0))]
     pub die_ht: R4,
+    #[default(R4::from(0.0))]
     pub die_wid: R4,
+    #[default(U1::from(0))]
     pub wf_units: U1,
+    #[default(C1::from(0x20))]
     pub wf_flat: C1,
+    #[default(I2::from(std::i16::MIN))]
     pub center_x: I2,
+    #[default(I2::from(std::i16::MIN))]
     pub center_y: I2,
+    #[default(C1::from(0x20))]
     pub pos_x: C1,
+    #[default(C1::from(0x20))]
     pub pos_y: C1,
 }
 
@@ -299,12 +363,19 @@ pub struct PRR<'a> {
     pub part_flg: B1,
     pub num_test: U2,
     pub hard_bin: U2,
+    #[default(U2::from(0xffff))]
     pub soft_bin: U2,
+    #[default(I2::from(std::i16::MIN))]
     pub x_coord: I2,
+    #[default(I2::from(std::i16::MIN))]
     pub y_coord: I2,
+    #[default(U4::from(0))]
     pub test_t: U4,
+    #[default(Cn(b""))]
     pub part_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub part_txt: Cn<'a>,
+    #[default(Bn(b""))]
     pub part_fix: Bn<'a>,
 }
 
@@ -317,37 +388,62 @@ pub struct TSR<'a> {
     pub exec_cnt: U4,
     pub fail_cnt: U4,
     pub alrm_cnt: U4,
+    #[default(Cn(b""))]
     pub test_nam: Cn<'a>,
+    #[default(Cn(b""))]
     pub seq_name: Cn<'a>,
+    #[default(Cn(b""))]
     pub test_lbl: Cn<'a>,
+    #[default(B1::from(0xff))]
     pub opt_flag: B1,
+    #[default(R4::from(std::f32::NAN))]
     pub test_tim: R4,
+    #[default(R4::from(std::f32::NAN))]
     pub test_min: R4,
+    #[default(R4::from(std::f32::NAN))]
     pub test_max: R4,
+    #[default(R4::from(std::f32::NAN))]
     pub tst_sums: R4,
+    #[default(R4::from(std::f32::NAN))]
     pub tst_sqrs: R4,
 }
 
 #[derive(Debug, PartialEq, STDFRecord)]
 pub struct PTR<'a> {
+    pub test_num: U4,
     pub head_num: U1,
     pub site_num: U1,
     pub test_flg: B1,
     pub parm_flg: B1,
+    #[default(R4::from(std::f32::NAN))]
     pub result: R4,
+    #[default(Cn(b""))]
     pub test_txt: Cn<'a>,
+    #[default(Cn(b""))]
     pub alarm_id: Cn<'a>,
+    #[default(B1::from(0xff))]
     pub opt_flag: B1,
+    #[default(I1::from(std::i8::MIN))]
     pub res_scal: I1,
+    #[default(I1::from(std::i8::MIN))]
     pub llm_scal: I1,
+    #[default(I1::from(std::i8::MIN))]
     pub hlm_scal: I1,
+    #[default(R4::from(std::f32::NAN))]
     pub lo_limit: R4,
+    #[default(R4::from(std::f32::NAN))]
     pub hi_limit: R4,
+    #[default(Cn(b""))]
     pub units: Cn<'a>,
+    #[default(Cn(b""))]
     pub c_resfmt: Cn<'a>,
+    #[default(Cn(b""))]
     pub c_llmfmt: Cn<'a>,
+    #[default(Cn(b""))]
     pub c_hlmfmt: Cn<'a>,
+    #[default(R4::from(std::f32::NAN))]
     pub lo_spec: R4,
+    #[default(R4::from(std::f32::NAN))]
     pub hi_spec: R4,
 }
 
@@ -426,8 +522,8 @@ pub struct BPS<'a> {
     pub seq_name: Cn<'a>,
 }
 
-#[derive(Debug, Eq, PartialEq, STDFRecord)]
-pub struct EPS {}
+#[derive(Debug, Eq, PartialEq)]
+pub struct EPS;
 
 /*
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
@@ -444,7 +540,7 @@ pub struct DTR<'a> {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct Unknown<'a> {
+pub struct Raw<'a> {
     pub rec_typ: U1,
     pub rec_sub: U1,
     pub contents: &'a [u8],
@@ -477,14 +573,14 @@ pub enum V4<'a> {
     EPS(EPS),
     //GDR(GDR<'a>),
     DTR(DTR<'a>),
-    Unknown(Unknown<'a>),
+    Unknown(Raw<'a>),
+    Invalid(Raw<'a>),
 }
 
 impl<'a> TryRead<'a, ctx::Endian> for V4<'a> {
     fn try_read(bytes: &'a [u8], endian: ctx::Endian) -> byte::Result<(Self, usize)> {
         let offset = &mut 0;
         let header = bytes.read_with::<Header>(offset, endian)?;
-        println!("{:?}", header);
         let typ_sub = (u8::from(&header.rec_typ), u8::from(&header.rec_sub));
         let reclen = u16::from(&header.rec_len) as usize;
         let rec_bytes = &bytes[*offset..*offset + reclen];
@@ -513,10 +609,10 @@ impl<'a> TryRead<'a, ctx::Endian> for V4<'a> {
                 //(15, 15) => V4::MPR(rec_bytes.read_with::<MPR>(rec_offset, endian)?),
                 //(15, 20) => V4::FTR(rec_bytes.read_with::<FTR>(rec_offset, endian)?),
                 (20, 10) => V4::BPS(rec_bytes.read_with::<BPS>(rec_offset, endian)?),
-                (20, 20) => V4::EPS(rec_bytes.read_with::<EPS>(rec_offset, endian)?),
+                (20, 20) => V4::EPS(EPS),
                 //(50, 10) => V4::GDR(rec_bytes.read_with::<GDR>(rec_offset, endian)?),
                 (50, 30) => V4::DTR(rec_bytes.read_with::<DTR>(rec_offset, endian)?),
-                (typ, sub) => V4::Unknown(Unknown {
+                (typ, sub) => V4::Unknown(Raw {
                     rec_typ: U1::from(typ),
                     rec_sub: U1::from(sub),
                     contents: rec_bytes,
@@ -526,12 +622,12 @@ impl<'a> TryRead<'a, ctx::Endian> for V4<'a> {
         };
         let rec = match parse_rec() {
             Ok(rec) => rec,
-            Err(byte::Error::Incomplete) => V4::Unknown(Unknown {
+            Err(byte::Error::BadInput { err }) => return Err(byte::Error::BadInput { err }),
+            Err(_) => V4::Invalid(Raw {
                 rec_typ: U1::from(typ_sub.0),
                 rec_sub: U1::from(typ_sub.1),
                 contents: rec_bytes,
             }),
-            Err(e) => return Err(e),
         };
         *offset += reclen;
         Ok((rec, *offset))
@@ -567,10 +663,11 @@ impl<'a> TryWrite<ctx::Endian> for V4<'a> {
             //V4::MPR(r) => rec_bytes.write_with::<MPR>(rec_offset, r, endian),
             //V4::FTR(r) => rec_bytes.write_with::<FTR>(rec_offset, r, endian),
             V4::BPS(r) => rec_bytes.write_with::<BPS>(rec_offset, r, endian),
-            V4::EPS(r) => rec_bytes.write_with::<EPS>(rec_offset, r, endian),
+            V4::EPS(_) => Ok(()),
             //V4::GDR(r) => rec_bytes.write_with::<GDR>(rec_offset, r, endian),
             V4::DTR(r) => rec_bytes.write_with::<DTR>(rec_offset, r, endian),
             V4::Unknown(_) => return Ok(0), // TODO: write unknown records
+            V4::Invalid(_) => return Ok(0),
         }?;
         let header = Header {
             rec_len: U2::from(*rec_offset as u16),
@@ -612,6 +709,7 @@ impl<'a> V4<'a> {
             //V4::GDR(_)=>(50, 10),
             V4::DTR(_) => (50, 30),
             V4::Unknown(ref r) => (u8::from(&r.rec_typ), u8::from(&r.rec_sub)),
+            V4::Invalid(ref r) => (u8::from(&r.rec_typ), u8::from(&r.rec_sub)),
         }
     }
 }
