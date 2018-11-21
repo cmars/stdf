@@ -19,11 +19,17 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
         return TokenStream::from(quote!{});
     };
 
-    let try_read_fields = record_struct.fields.iter().map(|ref x| {
+    let try_read_vars = record_struct.fields.iter().map(|ref x| {
         let name = x.ident.as_ref().unwrap();
         let ty = &x.ty;
         quote! {
-            #name: bytes.read_with::<#ty>(offset, endian)?
+            let #name = bytes.read_with::<#ty>(offset, endian)?;
+        }
+    });
+    let try_read_fields = record_struct.fields.iter().map(|ref x| {
+        let name = x.ident.as_ref().unwrap();
+        quote! {
+            #name: #name
         }
     });
     let try_write_fields = record_struct.fields.iter().map(|ref x| {
@@ -49,6 +55,7 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
         impl #impl_generics TryRead<#(#record_ty_lifetimes,)* ctx::Endian> for #name #ty_generics #where_clause {
             fn try_read(bytes: &'a [u8], endian: ctx::Endian) -> byte::Result<(Self, usize)> {
                 let offset = &mut 0;
+                #(#try_read_vars)*
                 Ok((
                     #name {
                         #(#try_read_fields),*
