@@ -19,28 +19,20 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
         return TokenStream::from(quote!{});
     };
 
-    let try_read_fields = record_struct
-        .fields
-        .iter()
-        .filter(|x| x.ident.as_ref().unwrap().to_string() != "header")
-        .map(|ref x| {
-            let name = x.ident.as_ref().unwrap();
-            let ty = &x.ty;
-            quote! {
-                #name: bytes.read_with::<#ty>(offset, endian)?
-            }
-        });
-    let try_write_fields = record_struct
-        .fields
-        .iter()
-        .filter(|x| x.ident.as_ref().unwrap().to_string() != "header")
-        .map(|ref x| {
-            let name = x.ident.as_ref().unwrap();
-            let ty = &x.ty;
-            quote! {
-                bytes.write_with::<#ty>(offset, self.#name, endian)?;
-            }
-        });
+    let try_read_fields = record_struct.fields.iter().map(|ref x| {
+        let name = x.ident.as_ref().unwrap();
+        let ty = &x.ty;
+        quote! {
+            #name: bytes.read_with::<#ty>(offset, endian)?
+        }
+    });
+    let try_write_fields = record_struct.fields.iter().map(|ref x| {
+        let name = x.ident.as_ref().unwrap();
+        let ty = &x.ty;
+        quote! {
+            bytes.write_with::<#ty>(offset, self.#name, endian)?;
+        }
+    });
     let default_impl_generics: syn::Generics = parse_quote! { <'a> };
     let (record_impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     // TryRead needs to declare an 'a lifetime for the byte slice. The record type we're
@@ -59,7 +51,6 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
                 let offset = &mut 0;
                 Ok((
                     #name {
-                        header: bytes.read_with::<Header>(offset, endian)?,
                         #(#try_read_fields),*
                     },
                     *offset,
@@ -71,7 +62,6 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
         impl #impl_generics TryWrite<ctx::Endian> for #name #ty_generics #where_clause {
             fn try_write(self, bytes: &mut [u8], endian: ctx::Endian) -> byte::Result<usize> {
                 let offset = &mut 0;
-                bytes.write_with::<Header>(offset, self.header, endian)?;
                 #(#try_write_fields);*
                 Ok(*offset)
             }

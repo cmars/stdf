@@ -6,7 +6,7 @@ extern crate byte;
 use byte::BytesExt;
 
 extern crate stdf;
-use stdf::records::{FAR, V4};
+use stdf::records::{Header, V4};
 
 extern crate memmap;
 use memmap::MmapOptions;
@@ -27,8 +27,8 @@ fn dump_stdf(filename: &str) -> Result<(), Error> {
     let f = File::open(filename)?;
     let m = unsafe { MmapOptions::new().map(&f)? };
     let bytes = &m[..];
-    let endian =
-        FAR::detect_endian(bytes).map_err(|x| Error::new(ErrorKind::Other, format!("{:?}", x)))?;
+    let endian = Header::detect_endian(bytes)
+        .map_err(|x| Error::new(ErrorKind::Other, format!("{:?}", x)))?;
     let offset = &mut 0;
     loop {
         let v4 = bytes
