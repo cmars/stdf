@@ -1,6 +1,6 @@
 [package]
 name = "stdf"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Casey Marshall <git@cmars.tech>"]
 description = "Standard Test Data Format (STDF) serialization and data processing"
 keywords = ["semiconductor", "test-equipment", "manufacturing"]
