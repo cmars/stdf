@@ -62,31 +62,6 @@ pub struct FAR {
     pub stdf_ver: U1,
 }
 
-/*
-impl<'a> TryRead<'a, ctx::Endian> for FAR {
-    fn try_read(bytes: &'a [u8], endian: ctx::Endian) -> byte::Result<(Self, usize)> {
-        let offset = &mut 0;
-        Ok((
-            FAR {
-                cpu_type: bytes.read_with::<U1>(offset, endian)?,
-                stdf_ver: bytes.read_with::<U1>(offset, endian)?,
-            },
-            *offset,
-        ))
-    }
-}
-
-impl TryWrite<ctx::Endian> for FAR {
-    fn try_write(self, bytes: &mut [u8], endian: ctx::Endian) -> byte::Result<usize> {
-        let offset = &mut 0;
-        bytes.write_with::<Header>(offset, self.header, endian)?;
-        bytes.write_with::<U1>(offset, self.cpu_type, endian)?;
-        bytes.write_with::<U1>(offset, self.stdf_ver, endian)?;
-        Ok(*offset)
-    }
-}
-*/
-
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct ATR<'a> {
     pub mod_tim: U4,
@@ -227,39 +202,47 @@ pub struct PMR<'a> {
     pub site_num: U1,
 }
 
-/*
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct PGR<'a> {
     pub grp_indx: U2,
     pub grp_nam: Cn<'a>,
     pub indx_cnt: U2,
-    #[array_length(indx_cnt)]
+    #[array_length(u16::from(indx_cnt))]
+    #[array_type(U2)]
     pub pmr_indx: Vec<U2>,
 }
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct PLR<'a> {
     pub grp_cnt: U2,
-    #[array_length(grp_cnt)]
+    #[array_length(u16::from(grp_cnt))]
+    #[array_type(U2)]
     pub grp_indx: Vec<U2>,
-    #[array_length(grp_cnt)]
+    #[array_length(u16::from(grp_cnt))]
+    #[array_type(U2)]
     pub grp_mode: Vec<U2>,
-    #[array_length(grp_cnt)]
+    #[array_length(u16::from(grp_cnt))]
+    #[array_type(U1)]
     pub grp_radx: Vec<U1>,
-    #[array_length(grp_cnt)]
+    #[array_length(u16::from(grp_cnt))]
+    #[array_type(Cn)]
     pub pgm_char: Vec<Cn<'a>>,
-    #[array_length(grp_cnt)]
+    #[array_length(u16::from(grp_cnt))]
+    #[array_type(Cn)]
     pub rtn_char: Vec<Cn<'a>>,
-    #[array_length(grp_cnt)]
+    #[array_length(u16::from(grp_cnt))]
+    #[array_type(Cn)]
     pub pgm_chal: Vec<Cn<'a>>,
-    #[array_length(grp_cnt)]
+    #[array_length(u16::from(grp_cnt))]
+    #[array_type(Cn)]
     pub rtn_chal: Vec<Cn<'a>>,
 }
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct RDR {
     pub num_bins: U2,
-    #[array_length(num_bins)]
+    #[array_length(u16::from(num_bins))]
+    #[array_type(U2)]
     pub rtst_bin: Vec<U2>,
 }
 
@@ -268,26 +251,42 @@ pub struct SDR<'a> {
     pub head_num: U1,
     pub site_grp: U1,
     pub site_cnt: U1,
-    #[array_length(site_cnt)]
+    #[array_length(u8::from(site_cnt))]
+    #[array_type(U1)]
     pub site_num: Vec<U1>,
+    #[default(Cn(b""))]
     pub hand_typ: Cn<'a>,
+    #[default(Cn(b""))]
     pub hand_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub card_typ: Cn<'a>,
+    #[default(Cn(b""))]
     pub card_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub load_typ: Cn<'a>,
+    #[default(Cn(b""))]
     pub load_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub dib_typ: Cn<'a>,
+    #[default(Cn(b""))]
     pub dib_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub cabl_typ: Cn<'a>,
+    #[default(Cn(b""))]
     pub cabl_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub cont_typ: Cn<'a>,
+    #[default(Cn(b""))]
     pub cont_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub lasr_typ: Cn<'a>,
+    #[default(Cn(b""))]
     pub lasr_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub extr_typ: Cn<'a>,
+    #[default(Cn(b""))]
     pub extr_id: Cn<'a>,
 }
-*/
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct WIR<'a> {
@@ -556,10 +555,10 @@ pub enum V4<'a> {
     HBR(HBR<'a>),
     SBR(SBR<'a>),
     PMR(PMR<'a>),
-    //PGR(PGR<'a>),
-    //PLR(PLR<'a>),
-    //RDR(RDR),
-    //SDR(SDR<'a>),
+    PGR(PGR<'a>),
+    PLR(PLR<'a>),
+    RDR(RDR),
+    SDR(SDR<'a>),
     WIR(WIR<'a>),
     WRR(WRR<'a>),
     WCR(WCR),
@@ -595,10 +594,10 @@ impl<'a> TryRead<'a, ctx::Endian> for V4<'a> {
                 (1, 40) => V4::HBR(rec_bytes.read_with::<HBR>(rec_offset, endian)?),
                 (1, 50) => V4::SBR(rec_bytes.read_with::<SBR>(rec_offset, endian)?),
                 (1, 60) => V4::PMR(rec_bytes.read_with::<PMR>(rec_offset, endian)?),
-                //(1, 62) => V4::PGR(rec_bytes.read_with::<PGR>(rec_offset, endian)?),
-                //(1, 63) => V4::PLR(rec_bytes.read_with::<PLR>(rec_offset, endian)?),
-                //(1, 70) => V4::RDR(rec_bytes.read_with::<RDR>(rec_offset, endian)?),
-                //(1, 80) => V4::SDR(rec_bytes.read_with::<SDR>(rec_offset, endian)?),
+                (1, 62) => V4::PGR(rec_bytes.read_with::<PGR>(rec_offset, endian)?),
+                (1, 63) => V4::PLR(rec_bytes.read_with::<PLR>(rec_offset, endian)?),
+                (1, 70) => V4::RDR(rec_bytes.read_with::<RDR>(rec_offset, endian)?),
+                (1, 80) => V4::SDR(rec_bytes.read_with::<SDR>(rec_offset, endian)?),
                 (2, 10) => V4::WIR(rec_bytes.read_with::<WIR>(rec_offset, endian)?),
                 (2, 20) => V4::WRR(rec_bytes.read_with::<WRR>(rec_offset, endian)?),
                 (2, 30) => V4::WCR(rec_bytes.read_with::<WCR>(rec_offset, endian)?),
@@ -649,10 +648,10 @@ impl<'a> TryWrite<ctx::Endian> for V4<'a> {
             V4::HBR(r) => rec_bytes.write_with::<HBR>(rec_offset, r, endian),
             V4::SBR(r) => rec_bytes.write_with::<SBR>(rec_offset, r, endian),
             V4::PMR(r) => rec_bytes.write_with::<PMR>(rec_offset, r, endian),
-            //V4::PGR(r) => rec_bytes.write_with::<PGR>(rec_offset, r, endian),
-            //V4::PLR(r) => rec_bytes.write_with::<PLR>(rec_offset, r, endian),
-            //V4::RDR(r) => rec_bytes.write_with::<RDR>(rec_offset, r, endian),
-            //V4::SDR(r) => rec_bytes.write_with::<SDR>(rec_offset, r, endian),
+            V4::PGR(r) => rec_bytes.write_with::<PGR>(rec_offset, r, endian),
+            V4::PLR(r) => rec_bytes.write_with::<PLR>(rec_offset, r, endian),
+            V4::RDR(r) => rec_bytes.write_with::<RDR>(rec_offset, r, endian),
+            V4::SDR(r) => rec_bytes.write_with::<SDR>(rec_offset, r, endian),
             V4::WIR(r) => rec_bytes.write_with::<WIR>(rec_offset, r, endian),
             V4::WRR(r) => rec_bytes.write_with::<WRR>(rec_offset, r, endian),
             V4::WCR(r) => rec_bytes.write_with::<WCR>(rec_offset, r, endian),
@@ -691,10 +690,10 @@ impl<'a> V4<'a> {
             V4::HBR(_) => (1, 40),
             V4::SBR(_) => (1, 50),
             V4::PMR(_) => (1, 60),
-            //V4::PGR(_)=>(1, 62),
-            //V4::PLR(_)=>(1, 63),
-            //V4::RDR(_)=>(1, 70),
-            //V4::SDR(_)=>(1, 80),
+            V4::PGR(_) => (1, 62),
+            V4::PLR(_) => (1, 63),
+            V4::RDR(_) => (1, 70),
+            V4::SDR(_) => (1, 80),
             V4::WIR(_) => (2, 10),
             V4::WRR(_) => (2, 20),
             V4::WCR(_) => (2, 30),
