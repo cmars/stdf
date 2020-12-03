@@ -446,8 +446,7 @@ pub struct PTR<'a> {
     pub hi_spec: R4,
 }
 
-/*
-#[derive(Debug, Eq, PartialEq, STDFRecord)]
+#[derive(Debug, PartialEq, STDFRecord)]
 pub struct MPR<'a> {
     pub head_num: U1,
     pub site_num: U1,
@@ -455,9 +454,11 @@ pub struct MPR<'a> {
     pub parm_flg: B1,
     pub rtn_icnt: U2,
     pub rslt_cnt: U2,
-    #[nibble_array_length(rtn_icnt)]
-    pub rtn_stat: Vec<U1>,
-    #[array_length(rtn_rslt)]
+    #[array_length(u16::from(rtn_icnt))] //nibble_array_length
+    #[array_type(U1)] //nibble_array
+    pub rtn_stat: Vec<U1>, //N1
+    #[array_length(u16::from(rtn_icnt))]
+    #[array_type(R4)]
     pub rtn_rslt: Vec<R4>,
     pub test_txt: Cn<'a>,
     pub alarm_id: Cn<'a>,
@@ -469,7 +470,8 @@ pub struct MPR<'a> {
     pub hi_limit: R4,
     pub start_in: R4,
     pub incr_in: R4,
-    #[array_length(rtn_icnt)]
+    #[array_length(u16::from(rtn_icnt))]
+    #[array_type(U2)]
     pub rtn_indx: Vec<U2>,
     pub units: Cn<'a>,
     pub units_in: Cn<'a>,
@@ -495,13 +497,17 @@ pub struct FTR<'a> {
     pub vect_off: I2,
     pub rtn_icnt: U2,
     pub pgm_icnt: U2,
-    #[array_length(rtn_icnt)]
+    #[array_length(u16::from(rtn_icnt))]
+    #[array_type(U2)]
     pub rtn_indx: Vec<U2>,
-    #[nibble_array_length(rtn_icnt)]
+    #[array_length(u16::from(rtn_icnt))] //nibble
+    #[array_type(U1)] //n1
     pub rtn_stat: Vec<U1>,
-    #[array_length(pgm_icnt)]
+    #[array_length(u16::from(pgm_icnt))]
+    #[array_type(U2)]
     pub pgm_indx: Vec<U2>,
-    #[nibble_array_length(pgm_icnt)]
+    #[array_length(u16::from(pgm_icnt))] //nibble
+    #[array_type(U1)] //n1
     pub pgm_stat: Vec<U1>,
     pub fail_pin: Dn<'a>,
     pub vect_nam: Cn<'a>,
@@ -514,7 +520,6 @@ pub struct FTR<'a> {
     pub patg_num: U1,
     pub spin_map: Dn<'a>,
 }
-*/
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct BPS<'a> {
@@ -524,14 +529,13 @@ pub struct BPS<'a> {
 #[derive(Debug, Eq, PartialEq)]
 pub struct EPS;
 
-/*
-#[derive(Debug, Eq, PartialEq, STDFRecord)]
+#[derive(Debug, PartialEq, STDFRecord)]
 pub struct GDR<'a> {
     pub fld_cnt: U2,
-    #[array_length(fld_cnt)]
+    #[array_length(u16::from(fld_cnt))]
+    #[array_type(Vn<'a>)]
     pub gen_data: Vec<Vn<'a>>,
 }
-*/
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct DTR<'a> {
@@ -566,11 +570,11 @@ pub enum V4<'a> {
     PRR(PRR<'a>),
     TSR(TSR<'a>),
     PTR(PTR<'a>),
-    //MPR(MPR<'a>),
-    //FTR(FTR<'a>),
+    MPR(MPR<'a>),
+    FTR(FTR<'a>),
     BPS(BPS<'a>),
     EPS(EPS),
-    //GDR(GDR<'a>),
+    GDR(GDR<'a>),
     DTR(DTR<'a>),
     Unknown(Raw<'a>),
     Invalid(Raw<'a>),
@@ -605,11 +609,11 @@ impl<'a> TryRead<'a, ctx::Endian> for V4<'a> {
                 (5, 20) => V4::PRR(rec_bytes.read_with::<PRR>(rec_offset, endian)?),
                 (10, 30) => V4::TSR(rec_bytes.read_with::<TSR>(rec_offset, endian)?),
                 (15, 10) => V4::PTR(rec_bytes.read_with::<PTR>(rec_offset, endian)?),
-                //(15, 15) => V4::MPR(rec_bytes.read_with::<MPR>(rec_offset, endian)?),
-                //(15, 20) => V4::FTR(rec_bytes.read_with::<FTR>(rec_offset, endian)?),
+                (15, 15) => V4::MPR(rec_bytes.read_with::<MPR>(rec_offset, endian)?),
+                (15, 20) => V4::FTR(rec_bytes.read_with::<FTR>(rec_offset, endian)?),
                 (20, 10) => V4::BPS(rec_bytes.read_with::<BPS>(rec_offset, endian)?),
                 (20, 20) => V4::EPS(EPS),
-                //(50, 10) => V4::GDR(rec_bytes.read_with::<GDR>(rec_offset, endian)?),
+                (50, 10) => V4::GDR(rec_bytes.read_with::<GDR>(rec_offset, endian)?),
                 (50, 30) => V4::DTR(rec_bytes.read_with::<DTR>(rec_offset, endian)?),
                 (typ, sub) => V4::Unknown(Raw {
                     rec_typ: U1::from(typ),
@@ -659,11 +663,11 @@ impl<'a> TryWrite<ctx::Endian> for V4<'a> {
             V4::PRR(r) => rec_bytes.write_with::<PRR>(rec_offset, r, endian),
             V4::TSR(r) => rec_bytes.write_with::<TSR>(rec_offset, r, endian),
             V4::PTR(r) => rec_bytes.write_with::<PTR>(rec_offset, r, endian),
-            //V4::MPR(r) => rec_bytes.write_with::<MPR>(rec_offset, r, endian),
-            //V4::FTR(r) => rec_bytes.write_with::<FTR>(rec_offset, r, endian),
+            V4::MPR(r) => rec_bytes.write_with::<MPR>(rec_offset, r, endian),
+            V4::FTR(r) => rec_bytes.write_with::<FTR>(rec_offset, r, endian),
             V4::BPS(r) => rec_bytes.write_with::<BPS>(rec_offset, r, endian),
             V4::EPS(_) => Ok(()),
-            //V4::GDR(r) => rec_bytes.write_with::<GDR>(rec_offset, r, endian),
+            V4::GDR(r) => rec_bytes.write_with::<GDR>(rec_offset, r, endian),
             V4::DTR(r) => rec_bytes.write_with::<DTR>(rec_offset, r, endian),
             V4::Unknown(_) => return Ok(0), // TODO: write unknown records
             V4::Invalid(_) => return Ok(0),
@@ -701,11 +705,11 @@ impl<'a> V4<'a> {
             V4::PRR(_) => (5, 20),
             V4::TSR(_) => (10, 30),
             V4::PTR(_) => (15, 10),
-            //V4::MPR(_)=>(15, 15),
-            //V4::FTR(_)=>(15, 20),
+            V4::MPR(_) => (15, 15),
+            V4::FTR(_) => (15, 20),
             V4::BPS(_) => (20, 10),
             V4::EPS(_) => (20, 20),
-            //V4::GDR(_)=>(50, 10),
+            V4::GDR(_) => (50, 10),
             V4::DTR(_) => (50, 30),
             V4::Unknown(ref r) => (u8::from(&r.rec_typ), u8::from(&r.rec_sub)),
             V4::Invalid(ref r) => (u8::from(&r.rec_typ), u8::from(&r.rec_sub)),

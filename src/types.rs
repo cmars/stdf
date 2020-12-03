@@ -31,9 +31,9 @@ pub struct R4(f32);
 pub struct R8(f64);
 #[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Cn<'a>(pub &'a [u8]);
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Bn<'a>(pub &'a [u8]);
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Dn<'a>(pub u16, pub &'a [u8]);
 
 macro_rules! single_byte_type {
@@ -162,6 +162,25 @@ impl<'a> fmt::Debug for Cn<'a> {
     }
 }
 
+fn to_hex_string(bytes: &[u8]) -> String {
+    bytes
+        .iter()
+        .map(|b| format!("{:02X}", b))
+        .collect::<String>()
+}
+
+impl<'a> fmt::Debug for Bn<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, r#"Bn("{}")"#, to_hex_string(&self.0))
+    }
+}
+
+impl<'a> fmt::Debug for Dn<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, r#"Dn("{}")"#, to_hex_string(&self.1))
+    }
+}
+
 impl<'a> TryRead<'a, ctx::Endian> for Dn<'a> {
     fn try_read(bytes: &'a [u8], endian: ctx::Endian) -> byte::Result<(Self, usize)> {
         let offset = &mut 0;
@@ -192,6 +211,7 @@ impl<'a> TryWrite<ctx::Endian> for Dn<'a> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum Vn<'a> {
     B0,
     U1(U1),
@@ -206,6 +226,94 @@ pub enum Vn<'a> {
     Bn(Bn<'a>),
     Dn(Dn<'a>),
     N1(U1),
+}
+
+impl<'a> TryRead<'a, ctx::Endian> for Vn<'a> {
+    fn try_read(bytes: &'a [u8], endian: ctx::Endian) -> byte::Result<(Self, usize)> {
+        let offset = &mut 0;
+        let d_type = bytes.read_with::<U1>(offset, endian)?.0;
+        let val = match d_type {
+            0 => Vn::B0,
+            1 => Vn::U1(bytes.read_with::<U1>(offset, endian)?),
+            2 => Vn::U2(bytes.read_with::<U2>(offset, endian)?),
+            3 => Vn::U4(bytes.read_with::<U4>(offset, endian)?),
+            4 => Vn::I1(bytes.read_with::<I1>(offset, endian)?),
+            5 => Vn::I2(bytes.read_with::<I2>(offset, endian)?),
+            6 => Vn::I4(bytes.read_with::<I4>(offset, endian)?),
+            7 => Vn::R4(bytes.read_with::<R4>(offset, endian)?),
+            8 => Vn::R8(bytes.read_with::<R8>(offset, endian)?),
+            10 => Vn::Cn(bytes.read_with::<Cn<'a>>(offset, endian)?),
+            11 => Vn::Bn(bytes.read_with::<Bn<'a>>(offset, endian)?),
+            12 => Vn::Dn(bytes.read_with::<Dn<'a>>(offset, endian)?), //13 => Vn::N1(N1(bytes.read_with::<N1>(offset, endian)?.0)),
+            _ => {
+                return Err(byte::Error::BadInput {
+                    err: "unknown type",
+                })
+            }
+        };
+        Ok((val, *offset))
+    }
+}
+
+impl<'a> TryWrite<ctx::Endian> for Vn<'a> {
+    fn try_write(self, bytes: &mut [u8], endian: ctx::Endian) -> byte::Result<usize> {
+        let mut offset: usize = 0;
+        match self {
+            Vn::B0 => {
+                bytes.write_with::<u8>(&mut offset, 0, endian)?;
+            }
+            Vn::U1(v) => {
+                bytes.write_with::<u8>(&mut offset, 1, endian)?;
+                bytes.write_with::<U1>(&mut offset, v, endian)?;
+            }
+            Vn::U2(v) => {
+                bytes.write_with::<u8>(&mut offset, 2, endian)?;
+                bytes.write_with::<U2>(&mut offset, v, endian)?;
+            }
+            Vn::U4(v) => {
+                bytes.write_with::<u8>(&mut offset, 3, endian)?;
+                bytes.write_with::<U4>(&mut offset, v, endian)?;
+            }
+            Vn::I1(v) => {
+                bytes.write_with::<u8>(&mut offset, 4, endian)?;
+                bytes.write_with::<I1>(&mut offset, v, endian)?;
+            }
+            Vn::I2(v) => {
+                bytes.write_with::<u8>(&mut offset, 5, endian)?;
+                bytes.write_with::<I2>(&mut offset, v, endian)?;
+            }
+            Vn::I4(v) => {
+                bytes.write_with::<u8>(&mut offset, 6, endian)?;
+                bytes.write_with::<I4>(&mut offset, v, endian)?;
+            }
+            Vn::R4(v) => {
+                bytes.write_with::<u8>(&mut offset, 7, endian)?;
+                bytes.write_with::<R4>(&mut offset, v, endian)?;
+            }
+            Vn::R8(v) => {
+                bytes.write_with::<u8>(&mut offset, 8, endian)?;
+                bytes.write_with::<R8>(&mut offset, v, endian)?;
+            }
+            Vn::Cn(v) => {
+                bytes.write_with::<u8>(&mut offset, 10, endian)?;
+                bytes.write_with::<Cn>(&mut offset, v, endian)?;
+            }
+            Vn::Bn(v) => {
+                bytes.write_with::<u8>(&mut offset, 11, endian)?;
+                bytes.write_with::<Bn>(&mut offset, v, endian)?;
+            }
+            Vn::Dn(v) => {
+                bytes.write_with::<u8>(&mut offset, 12, endian)?;
+                bytes.write_with::<Dn>(&mut offset, v, endian)?;
+            }
+            _ => {
+                return Err(byte::Error::BadInput {
+                    err: "unknown type",
+                })
+            }
+        }
+        Ok(offset)
+    }
 }
 
 #[cfg(test)]
