@@ -19,7 +19,7 @@ fn attr_name(a: &syn::Path) -> String {
 fn default_attr(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
     for attr in &f.attrs {
         if attr_name(&attr.path) == "default" {
-            return Some(attr.tts.clone());
+            return Some(attr.tokens.clone());
         }
     }
     None
@@ -28,16 +28,27 @@ fn default_attr(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
 fn array_length_attr(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
     for attr in &f.attrs {
         if attr_name(&attr.path) == "array_length" {
-            return Some(attr.tts.clone());
+            let args: proc_macro2::TokenStream = attr.parse_args().unwrap();
+            return Some(args);
         }
     }
     None
 }
 
-fn array_type_attr(f: &syn::Field) -> Option<proc_macro2::TokenStream> {
+enum Array {
+    Nibble,
+    OfType(proc_macro2::TokenStream),
+}
+
+fn array_type_attr(f: &syn::Field) -> Option<Array> {
     for attr in &f.attrs {
         if attr_name(&attr.path) == "array_type" {
-            return Some(attr.tts.clone());
+            let args: proc_macro2::TokenStream = attr.parse_args().unwrap();
+            return if format!("{}", args) == "N1" {
+                Some(Array::Nibble)
+            } else {
+                Some(Array::OfType(args))
+            };
         }
     }
     None
@@ -54,7 +65,7 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
     let record_struct = if let syn::Data::Struct(ref record_struct) = derive_input.data {
         record_struct
     } else {
-        return TokenStream::from(quote!{});
+        return TokenStream::from(quote! {});
     };
 
     let try_read_vars = record_struct.fields.iter().map(|ref x| {
@@ -64,10 +75,26 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
             Some(ts) => ts,
             None => quote! { return Err(byte::Error::Incomplete) },
         };
-        match (array_length_attr(x), array_type_attr(x)) {
-            (Some(ref index_name), Some(ref index_type)) => quote! {
+        match (array_length_attr(x), array_type_attr(x).as_ref()) {
+            (Some(ref index_name), Some(Array::Nibble)) => quote! {
+                let mut #name: Vec<N1> = vec![];
+                let blen = (#index_name.0 / 2) + (#index_name.0 % 2);
+                for i in 0..blen.into() {
+                    let v = match bytes.read_with::<u8>(offset, endian) {
+                        Ok(v) => v,
+                        Err(byte::Error::Incomplete) => break,
+                        Err(byte::Error::BadOffset(_)) => break,
+                        Err(e) => return Err(e),
+                    };
+                    #name.push(N1::from(v & 0x0f));
+                    if #name.len() < #index_name.0.into() {
+                        #name.push(N1::from((v & 0xf0) >> 4));
+                    }
+                }
+            },
+            (Some(ref index_name), Some(Array::OfType(ref index_type))) => quote! {
                 let mut #name: Vec<#index_type> = vec![];
-                for i in 0..#index_name as usize {
+                for i in 0..#index_name.0.into() {
                     let v = match bytes.read_with::<#index_type>(offset, endian) {
                         Ok(v) => v,
                         Err(byte::Error::Incomplete) => break,
@@ -77,7 +104,7 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
                     #name.push(v);
                 }
             },
-            (None, None) => quote! {
+            (_, _) => quote! {
                 let #name = match bytes.read_with::<#ty>(offset, endian) {
                     Ok(v) => v,
                     Err(byte::Error::Incomplete) => #missing,
@@ -85,7 +112,6 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
                     Err(e) => return Err(e),
                 };
             },
-            _ => panic!("invalid array attributes"),
         }
     });
     let try_read_fields = record_struct.fields.iter().map(|ref x| {
@@ -97,14 +123,47 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
     let try_write_fields = record_struct.fields.iter().map(|ref x| {
         let name = x.ident.as_ref().unwrap();
         let ty = &x.ty;
-        match array_type_attr(x) {
-            Some(ref index_type) => quote! {
+        let missing = match default_attr(x) {
+            Some(_) => quote! { {} },
+            None => quote! { return Err(byte::Error::Incomplete) },
+        };
+        match (array_length_attr(x), array_type_attr(x).as_ref()) {
+            (_, Some(Array::OfType(ref index_type))) => quote! {
                 for v in self.#name {
-                    bytes.write_with::<#index_type>(offset, v.clone(), endian)?;
+                    match bytes.write_with::<#index_type>(offset, v.clone(), endian) {
+                        Ok(_) => {}
+                        Err(byte::Error::Incomplete) => #missing,
+                        Err(byte::Error::BadOffset(_)) => #missing,
+                        Err(e) => return Err(e),
+                    }
                 }
             },
-            None => quote! {
-                bytes.write_with::<#ty>(offset, self.#name, endian)?;
+            (Some(ref index_name), Some(Array::Nibble)) => quote! {
+                {
+                    let mut i = 0;
+                    while i < self.#index_name.0.into() {
+                        let mut byteval = self.#name[i].0 & 0xf;
+                        i+=1;
+                        if i < self.#index_name.0.into() {
+                            byteval |= (self.#name[i].0 << 4);
+                            i+=1;
+                        }
+                        match bytes.write_with::<u8>(offset, byteval, endian) {
+                            Ok(_) => {}
+                            Err(byte::Error::Incomplete) => #missing,
+                            Err(byte::Error::BadOffset(_)) => #missing,
+                            Err(e) => return Err(e),
+                        }
+                    }
+                }
+            },
+            (_, _) => quote! {
+                match bytes.write_with::<#ty>(offset, self.#name, endian) {
+                    Ok(_) => {},
+                    Err(byte::Error::Incomplete) => #missing,
+                    Err(byte::Error::BadOffset(_)) => #missing,
+                    Err(e) => return Err(e),
+                }
             },
         }
     });
@@ -120,7 +179,7 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
     } else {
         (record_impl_generics, generics.lifetimes())
     };
-    let try_read = quote!{
+    let try_read = quote! {
         impl #impl_generics TryRead<#(#record_ty_lifetimes,)* ctx::Endian> for #name #ty_generics #where_clause {
             fn try_read(bytes: &'a [u8], endian: ctx::Endian) -> byte::Result<(Self, usize)> {
                 let offset = &mut 0;
@@ -134,7 +193,7 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
             }
         }
     };
-    let try_write = quote!{
+    let try_write = quote! {
         impl #impl_generics TryWrite<ctx::Endian> for #name #ty_generics #where_clause {
             fn try_write(self, bytes: &mut [u8], endian: ctx::Endian) -> byte::Result<usize> {
                 let offset = &mut 0;
@@ -143,16 +202,8 @@ pub fn stdf_record(input: TokenStream) -> TokenStream {
             }
         }
     };
-    TokenStream::from(quote!{
+    TokenStream::from(quote! {
         #try_read
         #try_write
     })
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
 }

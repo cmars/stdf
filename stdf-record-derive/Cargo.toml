@@ -6,9 +6,9 @@ description = "Procedural macros supporting the `stdf` crate"
 license = "Apache-2.0"
 
 [dependencies]
-syn = "0.15.21"
-quote = "0.6.10"
-proc-macro2 = "0.4.24"
+syn = { version = "1.0", features = ["printing"] }
+proc-macro2 = "1.0"
+quote = "1.0"
 
 [lib]
 proc-macro = true

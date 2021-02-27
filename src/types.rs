@@ -6,33 +6,50 @@ use byte::ctx;
 use byte::{check_len, BytesExt, TryRead, TryWrite};
 
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
-pub struct B1(u8);
+pub struct B1(pub u8);
+
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
-pub struct C1(u8);
+pub struct C1(pub u8);
+
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
-pub struct U1(u8);
+pub struct U1(pub u8);
+
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
-pub struct U2(u16);
+pub struct N1(pub u8);
+
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
-pub struct U4(u32);
+pub struct U2(pub u16);
+
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
-pub struct U8(u64);
+pub struct U4(pub u32);
+
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
-pub struct I1(i8);
+pub struct U8(pub u64);
+
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
-pub struct I2(i16);
+pub struct I1(pub i8);
+
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
-pub struct I4(i32);
+pub struct I2(pub i16);
+
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
-pub struct I8(i64);
+pub struct I4(pub i32);
+
+#[derive(Debug, Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+pub struct I8(pub i64);
+
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub struct R4(f32);
+pub struct R4(pub f32);
+
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub struct R8(f64);
+pub struct R8(pub f64);
+
 #[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Cn<'a>(pub &'a [u8]);
+
 #[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Bn<'a>(pub &'a [u8]);
+
 #[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Dn<'a>(pub u16, pub &'a [u8]);
 
@@ -76,6 +93,7 @@ single_byte_type!(B1, u8);
 single_byte_type!(C1, u8);
 single_byte_type!(U1, u8);
 single_byte_type!(I1, i8);
+single_byte_type!(N1, u8);
 
 macro_rules! fixed_multi_byte_type {
     ($field_type:ident, $internal_type:ident, $byte_length:expr) => {
@@ -225,7 +243,7 @@ pub enum Vn<'a> {
     Cn(Cn<'a>),
     Bn(Bn<'a>),
     Dn(Dn<'a>),
-    N1(U1),
+    N1(N1),
 }
 
 impl<'a> TryRead<'a, ctx::Endian> for Vn<'a> {
@@ -244,7 +262,8 @@ impl<'a> TryRead<'a, ctx::Endian> for Vn<'a> {
             8 => Vn::R8(bytes.read_with::<R8>(offset, endian)?),
             10 => Vn::Cn(bytes.read_with::<Cn<'a>>(offset, endian)?),
             11 => Vn::Bn(bytes.read_with::<Bn<'a>>(offset, endian)?),
-            12 => Vn::Dn(bytes.read_with::<Dn<'a>>(offset, endian)?), //13 => Vn::N1(N1(bytes.read_with::<N1>(offset, endian)?.0)),
+            12 => Vn::Dn(bytes.read_with::<Dn<'a>>(offset, endian)?),
+            13 => Vn::N1(bytes.read_with::<N1>(offset, endian)?),
             _ => {
                 return Err(byte::Error::BadInput {
                     err: "unknown type",
@@ -306,10 +325,9 @@ impl<'a> TryWrite<ctx::Endian> for Vn<'a> {
                 bytes.write_with::<u8>(&mut offset, 12, endian)?;
                 bytes.write_with::<Dn>(&mut offset, v, endian)?;
             }
-            _ => {
-                return Err(byte::Error::BadInput {
-                    err: "unknown type",
-                })
+            Vn::N1(v) => {
+                bytes.write_with::<u8>(&mut offset, 13, endian)?;
+                bytes.write_with::<N1>(&mut offset, v, endian)?;
             }
         }
         Ok(offset)

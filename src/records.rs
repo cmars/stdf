@@ -64,24 +64,39 @@ pub struct FAR {
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct ATR<'a> {
+    #[default(U4::from(0))]
     pub mod_tim: U4,
+    #[default(Cn(b""))]
     pub cmd_line: Cn<'a>,
 }
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct MIR<'a> {
+    #[default(U4::from(0))]
     pub setup_t: U4,
+    #[default(U4::from(0))]
     pub start_t: U4,
+    #[default(U1::from(0))]
     pub stat_num: U1,
+    #[default(C1(b' '))]
     pub mode_cod: C1,
+    #[default(C1(b' '))]
     pub rtst_cod: C1,
+    #[default(C1(b' '))]
     pub prot_cod: C1,
+    #[default(U2::from(0))]
     pub burn_tim: U2,
+    #[default(C1(b' '))]
     pub cmod_cod: C1,
+    #[default(Cn(b""))]
     pub lot_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub part_typ: Cn<'a>,
+    #[default(Cn(b""))]
     pub node_nam: Cn<'a>,
+    #[default(Cn(b""))]
     pub tstr_typ: Cn<'a>,
+    #[default(Cn(b""))]
     pub job_nam: Cn<'a>,
     #[default(Cn(b""))]
     pub job_rev: Cn<'a>,
@@ -138,7 +153,7 @@ pub struct MIR<'a> {
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct MRR<'a> {
     pub finish_t: U4,
-    #[default(C1::from(0x20))]
+    #[default(C1::from(b' '))]
     pub disp_cod: C1,
     #[default(Cn(b""))]
     pub usr_desc: Cn<'a>,
@@ -207,7 +222,7 @@ pub struct PGR<'a> {
     pub grp_indx: U2,
     pub grp_nam: Cn<'a>,
     pub indx_cnt: U2,
-    #[array_length(u16::from(indx_cnt))]
+    #[array_length(indx_cnt)]
     #[array_type(U2)]
     pub pmr_indx: Vec<U2>,
 }
@@ -215,25 +230,25 @@ pub struct PGR<'a> {
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct PLR<'a> {
     pub grp_cnt: U2,
-    #[array_length(u16::from(grp_cnt))]
+    #[array_length(grp_cnt)]
     #[array_type(U2)]
     pub grp_indx: Vec<U2>,
-    #[array_length(u16::from(grp_cnt))]
+    #[array_length(grp_cnt)]
     #[array_type(U2)]
     pub grp_mode: Vec<U2>,
-    #[array_length(u16::from(grp_cnt))]
+    #[array_length(grp_cnt)]
     #[array_type(U1)]
     pub grp_radx: Vec<U1>,
-    #[array_length(u16::from(grp_cnt))]
+    #[array_length(grp_cnt)]
     #[array_type(Cn)]
     pub pgm_char: Vec<Cn<'a>>,
-    #[array_length(u16::from(grp_cnt))]
+    #[array_length(grp_cnt)]
     #[array_type(Cn)]
     pub rtn_char: Vec<Cn<'a>>,
-    #[array_length(u16::from(grp_cnt))]
+    #[array_length(grp_cnt)]
     #[array_type(Cn)]
     pub pgm_chal: Vec<Cn<'a>>,
-    #[array_length(u16::from(grp_cnt))]
+    #[array_length(grp_cnt)]
     #[array_type(Cn)]
     pub rtn_chal: Vec<Cn<'a>>,
 }
@@ -241,7 +256,7 @@ pub struct PLR<'a> {
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct RDR {
     pub num_bins: U2,
-    #[array_length(u16::from(num_bins))]
+    #[array_length(num_bins)]
     #[array_type(U2)]
     pub rtst_bin: Vec<U2>,
 }
@@ -251,7 +266,7 @@ pub struct SDR<'a> {
     pub head_num: U1,
     pub site_grp: U1,
     pub site_cnt: U1,
-    #[array_length(u8::from(site_cnt))]
+    #[array_length(site_cnt)]
     #[array_type(U1)]
     pub site_num: Vec<U1>,
     #[default(Cn(b""))]
@@ -448,81 +463,123 @@ pub struct PTR<'a> {
 
 #[derive(Debug, PartialEq, STDFRecord)]
 pub struct MPR<'a> {
+    pub test_num: U4,
     pub head_num: U1,
     pub site_num: U1,
     pub test_flg: B1,
     pub parm_flg: B1,
+    #[default(U2::from(0))]
     pub rtn_icnt: U2,
+    #[default(U2::from(0))]
     pub rslt_cnt: U2,
-    #[array_length(u16::from(rtn_icnt))] //nibble_array_length
-    #[array_type(U1)] //nibble_array
-    pub rtn_stat: Vec<U1>, //N1
-    #[array_length(u16::from(rtn_icnt))]
+    #[array_length(rtn_icnt)]
+    #[array_type(N1)]
+    pub rtn_stat: Vec<N1>,
+    #[array_length(rslt_cnt)]
     #[array_type(R4)]
     pub rtn_rslt: Vec<R4>,
+    #[default(Cn(b""))]
     pub test_txt: Cn<'a>,
+    #[default(Cn(b""))]
     pub alarm_id: Cn<'a>,
+    #[default(B1::from(0xff))]
     pub opt_flag: B1,
+    #[default(I1::from(std::i8::MIN))]
     pub res_scal: I1,
+    #[default(I1::from(std::i8::MIN))]
     pub llm_scal: I1,
+    #[default(I1::from(std::i8::MIN))]
     pub hlm_scal: I1,
+    #[default(R4::from(std::f32::NAN))]
     pub lo_limit: R4,
+    #[default(R4::from(std::f32::NAN))]
     pub hi_limit: R4,
+    #[default(R4::from(std::f32::NAN))]
     pub start_in: R4,
+    #[default(R4::from(std::f32::NAN))]
     pub incr_in: R4,
-    #[array_length(u16::from(rtn_icnt))]
+    #[array_length(rtn_icnt)]
     #[array_type(U2)]
     pub rtn_indx: Vec<U2>,
+    #[default(Cn(b""))]
     pub units: Cn<'a>,
+    #[default(Cn(b""))]
     pub units_in: Cn<'a>,
+    #[default(Cn(b""))]
     pub c_resfmt: Cn<'a>,
+    #[default(Cn(b""))]
     pub c_llmfmt: Cn<'a>,
+    #[default(Cn(b""))]
     pub c_hlmfmt: Cn<'a>,
+    #[default(R4::from(std::f32::NAN))]
     pub lo_spec: R4,
+    #[default(R4::from(std::f32::NAN))]
     pub hi_spec: R4,
 }
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct FTR<'a> {
+    pub test_num: U4,
     pub head_num: U1,
     pub site_num: U1,
     pub test_flg: B1,
+    #[default(B1::from(0xff))]
     pub opt_flag: B1,
+    #[default(U4::from(0))]
     pub cycl_cnt: U4,
+    #[default(U4::from(0))]
     pub rel_vadr: U4,
+    #[default(U4::from(0))]
     pub rept_cnt: U4,
+    #[default(U4::from(0))]
     pub num_fail: U4,
+    #[default(I4::from(0))]
     pub xfail_ad: I4,
+    #[default(I4::from(0))]
     pub yfail_ad: I4,
+    #[default(I2::from(0))]
     pub vect_off: I2,
+    #[default(U2::from(0))]
     pub rtn_icnt: U2,
+    #[default(U2::from(0))]
     pub pgm_icnt: U2,
-    #[array_length(u16::from(rtn_icnt))]
+    #[array_length(rtn_icnt)]
     #[array_type(U2)]
     pub rtn_indx: Vec<U2>,
-    #[array_length(u16::from(rtn_icnt))] //nibble
-    #[array_type(U1)] //n1
-    pub rtn_stat: Vec<U1>,
-    #[array_length(u16::from(pgm_icnt))]
+    #[array_length(rtn_icnt)]
+    #[array_type(N1)]
+    pub rtn_stat: Vec<N1>,
+    #[array_length(pgm_icnt)]
     #[array_type(U2)]
     pub pgm_indx: Vec<U2>,
-    #[array_length(u16::from(pgm_icnt))] //nibble
-    #[array_type(U1)] //n1
-    pub pgm_stat: Vec<U1>,
+    #[array_length(pgm_icnt)]
+    #[array_type(N1)]
+    pub pgm_stat: Vec<N1>,
+    #[default(Dn(0, b""))]
     pub fail_pin: Dn<'a>,
+    #[default(Cn(b""))]
     pub vect_nam: Cn<'a>,
+    #[default(Cn(b""))]
     pub time_set: Cn<'a>,
+    #[default(Cn(b""))]
     pub op_code: Cn<'a>,
+    #[default(Cn(b""))]
     pub test_txt: Cn<'a>,
+    #[default(Cn(b""))]
     pub alarm_id: Cn<'a>,
+    #[default(Cn(b""))]
     pub prog_txt: Cn<'a>,
+    #[default(Cn(b""))]
     pub rslt_txt: Cn<'a>,
+    #[default(U1::from(0))]
     pub patg_num: U1,
+    #[default(Dn(0, b""))]
     pub spin_map: Dn<'a>,
 }
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct BPS<'a> {
+    #[default(Cn(b""))]
     pub seq_name: Cn<'a>,
 }
 
@@ -531,14 +588,16 @@ pub struct EPS;
 
 #[derive(Debug, PartialEq, STDFRecord)]
 pub struct GDR<'a> {
+    #[default(U2::from(0))]
     pub fld_cnt: U2,
-    #[array_length(u16::from(fld_cnt))]
+    #[array_length(fld_cnt)]
     #[array_type(Vn<'a>)]
     pub gen_data: Vec<Vn<'a>>,
 }
 
 #[derive(Debug, Eq, PartialEq, STDFRecord)]
 pub struct DTR<'a> {
+    #[default(Cn(b""))]
     pub text_dat: Cn<'a>,
 }
 
@@ -719,6 +778,15 @@ impl<'a> V4<'a> {
 
 #[cfg(test)]
 mod tests {
+
+    macro_rules! assert_float {
+        ($x:expr, $y:expr, $d:expr) => {
+            if !($x - $y < $d || $y - $x < $d) {
+                panic!();
+            }
+        };
+    }
+
     use super::*;
     use byte::{BytesExt, BE, LE};
 
@@ -785,5 +853,89 @@ mod tests {
 
         let b: &[u8] = &[0x00, 0x02, 0u8, 10u8, 1u8, 4u8];
         assert_eq!(Header::detect_endian(b).unwrap(), BE);
+    }
+
+    #[test]
+    fn test_mpr_single_nibble() {
+        // BE representation
+        let b: &[u8] = &[
+            0u8, 23u8, 0x0fu8, 0x0fu8, // MPR
+            0u8, 0u8, 0u8, 103u8, // 4: test_num 103
+            1u8, 2u8, // 6: head_num 0, site_num 0
+            0u8, // 7: test_flg 0
+            0u8, // 8: parm_flg 0
+            0u8, 1u8, // 10: rtn_icnt 1
+            0u8, 2u8,  // 12: rslt_cnt 2
+            0xa5, // 13: rtn_stat 5 (a should be ignored)
+            0x3d, 0xcc, 0xcc, 0xcd, // 17: 0.1
+            0x3e, 0x4c, 0xcc, 0xcd, // 23: 0.2
+        ];
+        let offset = &mut 0;
+        let header = b.read_with::<Header>(offset, BE).unwrap();
+        assert_eq!(
+            header,
+            Header {
+                rec_len: U2::from(23),
+                rec_typ: U1::from(15),
+                rec_sub: U1::from(15),
+            }
+        );
+        let mpr = b.read_with::<MPR>(offset, BE).unwrap();
+        assert_eq!(mpr.test_num, U4::from(103));
+        assert_eq!(mpr.head_num, U1::from(1));
+        assert_eq!(mpr.site_num, U1::from(2));
+        assert_eq!(mpr.rtn_icnt, U2::from(1));
+        assert_eq!(mpr.rslt_cnt, U2::from(2));
+        assert_eq!(mpr.rtn_stat, vec![N1::from(0x5)]); // only low nibble
+        assert_eq!(mpr.rtn_rslt.len(), 2);
+        assert_float!(mpr.rtn_rslt[0].0, 0.1, f32::EPSILON);
+        assert_float!(mpr.rtn_rslt[1].0, 0.2, f32::EPSILON);
+
+        // note: this record won't round-trip because the upper nibble of rtn_stat is not parsed
+    }
+
+    #[test]
+    fn test_mpr_round_trip() {
+        // BE representation
+        let b: &[u8] = &[
+            0u8, 29u8, 0x0fu8, 0x0fu8, // MPR
+            0u8, 0u8, 0u8, 103u8, // 4: test_num 103
+            1u8, 2u8, // 6: head_num 0, site_num 0
+            0u8, // 7: test_flg 0
+            0u8, // 8: parm_flg 0
+            0u8, 2u8, // 10: rtn_icnt 1
+            0u8, 2u8,  // 12: rslt_cnt 2
+            0xa5, // 13: rtn_stat a, 5
+            0x3d, 0xcc, 0xcc, 0xcd, // 17: 0.1
+            0x3e, 0x4c, 0xcc, 0xcd, // 23: 0.2
+            5u8, b'h', b'e', b'l', b'l', b'o',
+        ];
+        let offset = &mut 0;
+        let header = b.read_with::<Header>(offset, BE).unwrap();
+        assert_eq!(
+            header,
+            Header {
+                rec_len: U2::from(29),
+                rec_typ: U1::from(15),
+                rec_sub: U1::from(15),
+            }
+        );
+        let mpr = b.read_with::<MPR>(offset, BE).unwrap();
+        assert_eq!(mpr.test_num, U4::from(103));
+        assert_eq!(mpr.head_num, U1::from(1));
+        assert_eq!(mpr.site_num, U1::from(2));
+        assert_eq!(mpr.rtn_icnt, U2::from(2));
+        assert_eq!(mpr.rslt_cnt, U2::from(2));
+        assert_eq!(mpr.rtn_stat, vec![N1::from(0x5), N1::from(0xa)]); // only low nibble
+        assert_eq!(mpr.rtn_rslt.len(), 2);
+        assert_float!(mpr.rtn_rslt[0].0, 0.1, f32::EPSILON);
+        assert_float!(mpr.rtn_rslt[1].0, 0.2, f32::EPSILON);
+        assert_eq!(mpr.test_txt, Cn(b"hello"));
+
+        let mut out = vec![0; *offset];
+        *offset = 0;
+        out.write_with(offset, header, BE).unwrap();
+        out.write_with(offset, mpr, BE).unwrap();
+        assert_eq!(b, out.as_slice());
     }
 }
