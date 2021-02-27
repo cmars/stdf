@@ -1,6 +1,6 @@
 [package]
 name = "stdf"
-version = "0.1.2"
+version = "0.2"
 authors = ["Casey Marshall <git@cmars.tech>"]
 description = "Standard Test Data Format (STDF) serialization and data processing"
 keywords = ["semiconductor", "test-equipment", "manufacturing"]
@@ -9,5 +9,5 @@ license = "Apache-2.0"
 
 [dependencies]
 byte = "0.2"
-memmap = "0.7.0"
+memmap = "0.7"
 stdf-record-derive = {path="stdf-record-derive", version="0.1.1"}
